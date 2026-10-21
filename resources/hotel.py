@@ -9,7 +9,7 @@ hoteis = [
 
 class Hoteis(Resource):
     def get(self):
-        return { "hoteis": hoteis }
+        return { "hoteis": [hotel.json() for hotel in HotelModel.query.all()] }
 
 class Hotel(Resource):
     argumentos = reqparse.RequestParser()
@@ -18,45 +18,46 @@ class Hotel(Resource):
     argumentos.add_argument("diaria", type=float, required=True, help="Diária é obrigatório")
     argumentos.add_argument("cidade", type=str, required=True, help="Cidade do hotel é obrigatório")
 
-    def encontrar_hotel(self,hotel_id):
-        for hotel in hoteis:
-            if hotel["hotel_id"] == hotel_id:
-                return hotel 
-        return None
-
     def get(self, hotel_id):
-        hotel = self.encontrar_hotel(hotel_id)
+        hotel = HotelModel.find_hotel(hotel_id)
         if hotel is not None:
-            return hotel, 200
+            return hotel.json(), 200
         return { "mensagem": "Hotel não foi encontrado"}
 
     def post(self, hotel_id):
         dados = Hotel.argumentos.parse_args() # dados é um dicionário
-
-        if HotelModel.find_hotel(hotel_id):     
+        hotel = HotelModel.find_hotel(hotel_id)
+        if hotel is not None:  
             return { "mensagem": f"O hotel com id {hotel_id} já existe na minha lista."}
         
         novo_hotel = HotelModel(hotel_id, **dados)
-        novo_hotel.save_hotel()
-        return novo_hotel.json(), 200
+        try:
+            novo_hotel.save_hotel()
+            return novo_hotel.json(), 200   
+        except:
+            return {"mensagem":"Um erro interno do servidor "}
     
     # Atualizar um hotel
     def put(self, hotel_id):
         dados = Hotel.argumentos.parse_args() # dados é um dicionário
 
         # Se o hotel_id existe
-        hotel = self.encontrar_hotel(hotel_id)
+        hotel = HotelModel.find_hotel(hotel_id)
         if hotel is not None:  
-            hotel.update(dados)
-            return hotel, 200
+            try:
+                hotel.update_hotel(*dados)
+                hotel.save_hotel()
+                return hotel.json(), 200
         
         # Se o hotel_id não  existe, crie o hotel
-        novo_hotel = {"hotel_id": hotel_id, **dados}
-        hoteis.append(novo_hotel)
-        return novo_hotel, 201
+        novo_hotel = HotelModel(hotel_id, **dados)
+        novo_hotel.save_hotel()
+        return novo_hotel.json(), 201
     
     def delete(self,hotel_id):
-        global hoteis
-        hoteis = [hotel for hotel in hoteis if hotel["hotel_id"] != hotel_id]
-        return { "mensagem": f"O hotel com id {hotel_id} foi removido com sucesso"}, 200
+        hotel = HotelModel.find_hotel(hotel_id)
+        if hotel is not None:
+            hotel.delete_hotel()
+            return {"mensagem": "Hotel removido com sucesso"}, 200
+        return {"mensagem":"Hotel não encontrado"}, 404
   
