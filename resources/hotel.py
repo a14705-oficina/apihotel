@@ -35,7 +35,7 @@ class Hotel(Resource):
             novo_hotel.save_hotel()
             return novo_hotel.json(), 200   
         except:
-            return {"mensagem":"Um erro interno do servidor "}
+            return {"mensagem":"Um erro interno do servidor"}
     
     # Atualizar um hotel
     def put(self, hotel_id):
@@ -48,7 +48,8 @@ class Hotel(Resource):
                 hotel.update_hotel(*dados)
                 hotel.save_hotel()
                 return hotel.json(), 200
-        
+            except:
+                return {"mensagem":"Um erro interno do servidor"}
         # Se o hotel_id não  existe, crie o hotel
         novo_hotel = HotelModel(hotel_id, **dados)
         novo_hotel.save_hotel()
